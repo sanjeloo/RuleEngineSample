@@ -1,0 +1,111 @@
+[
+  {
+    "WorkflowName": "Cricket",
+    "Rules": [
+      {
+        "RuleName": "Runs at Fall of 1st Wicket",
+        "SuccessEvent": "1st Wicket Rule Matched - Processing Odds",
+        "ErrorMessage": "Not found",
+        "ErrorType": "Error",
+        "RuleExpressionType": "LambdaExpression",
+        "Expression": "x => Regex.IsMatch(x.Name, \"^Runs at Fall of 1st Wicket$\", RegexOptions.IgnoreCase)",
+        "Properties": {
+          "Markets": [
+            {
+              "MarketName": "Runs at Fall of 1st Wicket",
+              "MarketRegex": "^Runs at Fall of 1st Wicket$",
+              "NameMustSetFromMarketName": true,
+              "MarketWhere": null,
+              "MarketGroupBy": null,
+              "MarketSelect": null,
+              "Description": "bet is valid after game is done",
+              "Order": 10,
+              "Tags": [ "Main Markets" ],
+              "OddWhere": "Header != null",
+              "OddSelect": "new ( (Header) + \" (\" + Name + \")\" as Name, Odd,decimal.Parse(Name) as Handicap)"
+            }
+          ]
+
+        }
+      },
+      {
+        "RuleName": "Batter Matches (Most Runs)",
+        "SuccessEvent": "Batter Matches (Most Runs) - Processing Odds",
+        "ErrorMessage": "Not found",
+        "ErrorType": "Error",
+        "RuleExpressionType": "LambdaExpression",
+        "Expression": "x => Regex.IsMatch(x.Name, \"^Batter Matches \\(Most Runs\\)$\", RegexOptions.IgnoreCase)",
+        "Properties": {
+          "Markets": [
+            {
+              "MarketName": "Batter Matches (Most Runs) - Player v Player",
+              "MarketRegex": "^Batter Matches \\(Most Runs\\) - (.+) v (.+)$",
+              "NameMustSetFromMarketName": false,
+              "MarketWhere": "Name != null",
+              "MarketGroupBy": "Name",
+              "MarketSelect": "\"Batter Matches (Most Runs) - \" + Key",
+              "Description": "bet is valid after game is done",
+              "Order": 170,
+              "Tags": [ "Batter Markets" ],
+              "OddWhere": "Header != null",
+              "OddSelect": "new ( (Name.Split(\" v \")[Header == \"1\" ? 0 : 1]) as Name, Odd)"
+            }
+          ]
+
+        }
+      },
+      {
+        "RuleName": "match lines",
+        "SuccessEvent": "match lines found",
+        "ErrorMessage": "Not found",
+        "ErrorType": "Error",
+        "RuleExpressionType": "LambdaExpression",
+        "Expression": "x => Regex.IsMatch(x.Name, \"match lines\", RegexOptions.IgnoreCase)",
+        "Properties": {
+          "Markets": [
+            {
+              "MarketName": "Match Result",
+              "MarketRegex": "^Match Result$",
+              "NameMustSetFromMarketName": true,
+              "MarketWhere": null,
+              "MarketGroupBy": null,
+              "MarketSelect": null,
+              "Description": "bet is valid after game is done",
+              "Order": 110,
+              "Tags": [ "Main Markets" ],
+              "OddWhere": "Header != null && Name == \"To Win\" ",
+              "OddSelect": "new ( GeneralFunctions.GetCompetitor(Header) as Name, Odd)"
+            },
+            {
+              "MarketName": "Total Score",
+              "MarketRegex": "^Total Score$",
+              "NameMustSetFromMarketName": true,
+              "MarketWhere": null,
+              "MarketGroupBy": null,
+              "MarketSelect": null,
+              "Description": "bet is valid after game is done",
+              "Order": 130,
+              "Tags": [ "Main Markets" ],
+              "OddWhere": "Header != null && Handicap != null && Name == \"Total\" ",
+              "OddSelect": "new ( ( GeneralFunctions.GetCompetitor(Header) + \" \" + (Handicap.StartsWith(\"O\") ? \"Over (\" + Handicap.Substring(2) + \")\" : Handicap.StartsWith(\"U\") ? \"Under(\" + Handicap.Substring(2) + \")\" : Handicap)) as Name, Odd, (decimal.Parse(Handicap.Substring(2))) as Handicap)"
+            },
+            {
+              "MarketName": "Set Handicap",
+              "MarketRegex": "^Set Handicap$",
+              "NameMustSetFromMarketName": true,
+              "MarketWhere": null,
+              "MarketGroupBy": null,
+              "MarketSelect": null,
+              "Description": "bet is valid after game is done",
+              "Order": 120,
+              "Tags": [ "Main Markets" ],
+              "OddWhere": "Header != null && Handicap != null && Name == \"Handicap\" ",
+              "OddSelect": "new ( ( GeneralFunctions.GetCompetitor(Header) + \" (\" + Handicap + \")\") as Name, Odd, decimal.Parse(Handicap) as Handicap)"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]
+
