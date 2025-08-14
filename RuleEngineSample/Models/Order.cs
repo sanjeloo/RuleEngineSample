@@ -1,42 +1,171 @@
-﻿namespace RuleEngineSample.Models
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using System.Linq.Expressions;
+using System.Text.RegularExpressions;
+
+namespace RuleEngineSample.Models
 {
     public class MarketDto
     {
-        public string Name { get; set; }
-        public List<OddsDto> Odds { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public List<OddsDto> Odds { get; set; } = new();
     }
+    
     public class OddsDto
     {
-        public string Name { get; set; }
-        public string Header { get; set; }
-        public string Handicap { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Header { get; set; } = string.Empty;
+        public string Handicap { get; set; } = string.Empty;
         public decimal Odd { get; set; }
-        
     }
 
     public record DbMarket(string Name, string Description, int Order, string[] Tags);
 
     public record DbOdd(string MarketName, string Name, decimal Odd, decimal? Handicap = null);
-    //{
-    //    public string Name { get; set; } = name;
-    //    public decimal Odd { get; set; } = odd;
-    //    public decimal? Handicap { get; set; } = handicap;
-    //}
 
+    // MongoDB Models
+    [BsonIgnoreExtraElements]
+    public class SportConfiguration
+    {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = string.Empty;
+        
+        [BsonElement("Sport")]
+        public string Sport { get; set; } = string.Empty;
+        
+        [BsonElement("MarketConfigs")]
+        public List<MarketConfigGroup> MarketConfigs { get; set; } = new();
+        
+        [BsonElement("CreatedAt")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        [BsonElement("UpdatedAt")]
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    }
 
+    [BsonIgnoreExtraElements]
+    public class MarketConfigGroup
+    {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = string.Empty;
+        
+        [BsonElement("Name")]
+        public string Name { get; set; } = string.Empty;
+        
+        [BsonElement("MarketRegex")]
+        public string MarketRegex { get; set; } = string.Empty;
+        
+        [BsonElement("Markets")]
+        public List<MarketConfig> Markets { get; set; } = new();
+        
+        [BsonElement("CreatedAt")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        [BsonElement("UpdatedAt")]
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    [BsonIgnoreExtraElements]
     public class MarketConfig
     {
-        public string MarketName { get; set; }
-        public string MarketRegex { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = string.Empty;
+        
+        [BsonElement("MarketName")]
+        public string MarketName { get; set; } = string.Empty;
+        
+        [BsonElement("MarketRegex")]
+        public string MarketRegex { get; set; } = string.Empty;
+        
+        [BsonElement("NameMustSetFromMarketName")]
         public bool NameMustSetFromMarketName { get; set; }
-        public string MarketWhere { get; set; }
-        public string MarketGroupBy { get; set; }
-        public string MarketSelect { get; set; }
-        public string Description { get; set; }
+        
+        [BsonElement("MarketWhere")]
+        public string? MarketWhere { get; set; }
+        
+        [BsonElement("MarketGroupBy")]
+        public string? MarketGroupBy { get; set; }
+        
+        [BsonElement("MarketSelect")]
+        public string? MarketSelect { get; set; }
+        
+        [BsonElement("Description")]
+        public string Description { get; set; } = string.Empty;
+        
+        [BsonElement("Order")]
         public int Order { get; set; }
-        public string[] Tags { get; set; }
-        public string OddWhere { get; set; }
-        public string OddSelect { get; set; }
+        
+        [BsonElement("Tags")]
+        public string[] Tags { get; set; } = Array.Empty<string>();
+        
+        [BsonElement("OddWhere")]
+        public string OddWhere { get; set; } = string.Empty;
+        
+        [BsonElement("OddSelect")]
+        public string OddSelect { get; set; } = string.Empty;
+        
+        [BsonElement("CreatedAt")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        [BsonElement("UpdatedAt")]
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    }
 
+    // Compiled Configuration Models for Performance
+    public class CompiledSportConfiguration
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Sport { get; set; } = string.Empty;
+        public List<CompiledMarketConfigGroup> MarketConfigs { get; set; } = new();
+        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+    }
+
+    public class CompiledMarketConfigGroup
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public Regex CompiledRegex { get; set; } = null!;
+        public List<CompiledMarketConfig> Markets { get; set; } = new();
+    }
+
+    public class CompiledMarketConfig
+    {
+        public string Id { get; set; } = string.Empty;
+        public string MarketName { get; set; } = string.Empty;
+        public string MarketRegex { get; set; } = string.Empty;
+        public bool NameMustSetFromMarketName { get; set; }
+        public string? MarketWhere { get; set; }
+        public string? MarketGroupBy { get; set; }
+        public string? MarketSelect { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public int Order { get; set; }
+        public string[] Tags { get; set; } = Array.Empty<string>();
+        public string OddWhere { get; set; } = string.Empty;
+        public string OddSelect { get; set; } = string.Empty;
+        
+        // Compiled expressions for performance
+        public Func<OddsDto, bool>? CompiledMarketWhere { get; set; }
+        public Func<IGrouping<string, OddsDto>, string>? CompiledMarketSelect { get; set; }
+        public Func<OddsDto, bool> CompiledOddWhere { get; set; } = null!;
+        public Func<OddsDto, object> CompiledOddSelect { get; set; } = null!;
+    }
+
+    // Legacy models for backward compatibility
+    public class MarketConfigLegacy
+    {
+        public string MarketName { get; set; } = string.Empty;
+        public string MarketRegex { get; set; } = string.Empty;
+        public bool NameMustSetFromMarketName { get; set; }
+        public string? MarketWhere { get; set; }
+        public string? MarketGroupBy { get; set; }
+        public string? MarketSelect { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public int Order { get; set; }
+        public string[] Tags { get; set; } = Array.Empty<string>();
+        public string OddWhere { get; set; } = string.Empty;
+        public string OddSelect { get; set; } = string.Empty;
     }
 }

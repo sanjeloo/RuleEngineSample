@@ -1,120 +1,226 @@
-﻿using RulesEngine.Models;
-using RuleEngineSample.Models;
-using System.Text.RegularExpressions;
-using System.Linq.Dynamic.Core;
-using System.Text.Json;
-using RuleEngineSample.Utils;
+﻿using RuleEngineSample.Models;
+using RuleEngineSample.Services;
 using RuleEngineSample.Sample;
 
 class Program
 {
+    private static MongoService _mongoService = null!;
+    private static CompilationService _compilationService = null!;
+    private static CacheService _cacheService = null!;
+    private static OptimizedMarketProcessor _marketProcessor = null!;
+
     static async Task Main(string[] args)
     {
-        // 1. Load the rules from JSON file
-        var currentDir = Directory.GetCurrentDirectory();
-        var projectRoot = currentDir;
-
-        // Navigate up until we find the directory containing the .csproj file
-        while (!Directory.GetFiles(projectRoot, "*.csproj").Any() && Directory.GetParent(projectRoot) != null)
+        try
         {
-            projectRoot = Directory.GetParent(projectRoot)!.FullName;
+            // Initialize services
+            InitializeServices();
+
+            // Initialize database with default Cricket configuration if empty
+            await InitializeDatabaseAsync();
+
+            // Load and compile configurations
+            await LoadAndCompileConfigurationsAsync();
+
+            // Process sample data using cached compiled configurations
+            await ProcessSampleDataAsync();
+
+            Console.WriteLine("Processing completed successfully!");
         }
-        var alljson = Directory.GetFiles(projectRoot, "discount-rules.json");
-
-        var json = File.ReadAllText(alljson[0]);
-        var workflowRules = JsonSerializer.Deserialize<List<Workflow>>(json);
-
-        // 2. Create RulesEngine instance
-        var reSettings = new ReSettings
+        catch (Exception ex)
         {
-            CustomTypes =
-            [
-                typeof(Regex),
-                typeof(RegexOptions),
-            ]
-        };
-        var config = new ParsingConfig
-        {
-            CustomTypeProvider = new MyCustomTypeProvider()
-        };
-        var re = new RulesEngine.RulesEngine(workflowRules!.ToArray(), reSettings);
-        List<MarketDto> marketDtos = SampleData.GetSamples();
+            Console.WriteLine($"Error in main program: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private static void InitializeServices()
+    {
+        Console.WriteLine("Initializing services...");
+        _mongoService = new MongoService();
+        _compilationService = new CompilationService();
+        _cacheService = new CacheService();
+        _marketProcessor = new OptimizedMarketProcessor();
+        Console.WriteLine("Services initialized successfully.");
+    }
+
+    private static async Task InitializeDatabaseAsync()
+    {
+        Console.WriteLine("Initializing database...");
         
-        // 3. Sample order object
-        //var market = ;
-        foreach (var marketDto in marketDtos)
+        try
         {
-            var resultList = await re.ExecuteAllRulesAsync("Cricket", marketDto);
-            var dbMarkets = new List<DbMarket>();
-            var dbOdds = new List<DbOdd>();
-
-            var resultSuccess = resultList.SingleOrDefault(c => c.IsSuccess);
-            if (resultSuccess is null)
+            // Check if we have any configurations
+            var existingConfigs = await _mongoService.GetAllSportConfigurationsAsync();
+            
+            if (!existingConfigs.Any())
             {
-                Console.WriteLine("nothing found");
-                continue;
-            }
-
-            if (!resultSuccess.Rule.Properties.TryGetValue("Markets", out var marketsObj) ||
-                marketsObj is not JsonElement jsonElement || jsonElement.ValueKind != JsonValueKind.Array)
-            {
-                continue;
-            }
-
-            var marketConfigs = jsonElement.EnumerateArray()
-                .Select(element => JsonSerializer.Deserialize<MarketConfig>(element.GetRawText()))
-                .OfType<MarketConfig>()
-                .ToList();
-
-            foreach (var marketConfig in marketConfigs)
-            {
-                string marketName;
-                if (marketConfig.NameMustSetFromMarketName)
+                Console.WriteLine("No configurations found. Creating default Cricket configuration...");
+                var success = await _mongoService.InitializeDefaultCricketConfigurationAsync();
+                if (success)
                 {
-                    marketName = marketConfig.MarketName!;
+                    Console.WriteLine("Default Cricket configuration created successfully.");
                 }
                 else
                 {
-                    marketName = marketDto.Odds.AsQueryable()
-                        .Where(marketConfig.MarketWhere)
-                        .GroupBy(marketConfig.MarketGroupBy)
-                        .Select(marketConfig.MarketSelect)
-                        .Cast<string>().FirstOrDefault()!;
+                    Console.WriteLine("Failed to create default Cricket configuration.");
                 }
+            }
+            else
+            {
+                Console.WriteLine($"Found {existingConfigs.Count} existing sport configurations.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing database: {ex.Message}");
+            Console.WriteLine("Please ensure MongoDB is running and accessible.");
+        }
+    }
 
-                dbMarkets.Add(new DbMarket(marketName, marketConfig.Description, marketConfig.Order, marketConfig.Tags));
-                // create market here
-              
+    private static async Task LoadAndCompileConfigurationsAsync()
+    {
+        Console.WriteLine("Loading and compiling configurations...");
+        
+        try
+        {
+            // Get all sport configurations from database
+            var sportConfigs = await _mongoService.GetAllSportConfigurationsAsync();
+            
+            if (!sportConfigs.Any())
+            {
+                Console.WriteLine("No sport configurations found in database.");
+                return;
+            }
 
+            // Compile all configurations
+            var compiledConfigs = _compilationService.CompileAllSportConfigurations(sportConfigs);
+            
+            // Cache compiled configurations
+            foreach (var compiledConfig in compiledConfigs)
+            {
+                _cacheService.CacheConfiguration(compiledConfig.Sport, compiledConfig);
+                Console.WriteLine($"Cached compiled configuration for {compiledConfig.Sport} with {compiledConfig.MarketConfigs.Count} market groups.");
+            }
 
-                // Now use the config in Select
-                var dynamicResults = marketDto.Odds.AsQueryable()
-                    .Where(marketConfig.OddWhere)
-                    .Select(config, marketConfig.OddSelect);
+            Console.WriteLine($"Successfully compiled and cached {compiledConfigs.Count} sport configurations.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading and compiling configurations: {ex.Message}");
+        }
+    }
 
-                var filteredOdds = new List<DbOdd>();
-                foreach (var dynamicObj in dynamicResults)
+    private static async Task ProcessSampleDataAsync()
+    {
+        Console.WriteLine("Processing sample data...");
+        
+        try
+        {
+            // Get sample data
+            List<MarketDto> marketDtos = SampleData.GetSamples();
+            Console.WriteLine($"Processing {marketDtos.Count} sample markets...");
+
+            var totalMarkets = 0;
+            var totalOdds = 0;
+
+            foreach (var marketDto in marketDtos)
+            {
+                Console.WriteLine($"Processing market: {marketDto.Name}");
+                
+                // Try to get cached configuration for Cricket (assuming all samples are Cricket)
+                var cachedConfig = _cacheService.GetCachedConfiguration("Cricket");
+                
+                if (cachedConfig == null)
                 {
-                    // Cast the dynamic object to DbOdd
-                    dynamic obj = dynamicObj;
-
-                    if (((object)obj).GetType().GetProperty("Handicap") != null)
+                    Console.WriteLine("Cricket configuration not found in cache. Reloading from database...");
+                    
+                    // Reload from database and recompile
+                    var dbConfig = await _mongoService.GetSportConfigurationBySportAsync("Cricket");
+                    if (dbConfig != null)
                     {
-                        filteredOdds.Add(new DbOdd(marketName, obj.Name, obj.Odd, obj.Handicap));
+                        cachedConfig = _compilationService.CompileSportConfiguration(dbConfig);
+                        _cacheService.CacheConfiguration("Cricket", cachedConfig);
+                        Console.WriteLine("Configuration reloaded and cached.");
                     }
                     else
                     {
-                        filteredOdds.Add(new DbOdd(marketName, obj.Name, obj.Odd));
+                        Console.WriteLine("Cricket configuration not found in database. Skipping...");
+                        continue;
                     }
                 }
-                dbOdds.AddRange(filteredOdds);
 
+                // Process market using compiled configuration
+                var (markets, odds) = _marketProcessor.ProcessMarketWithCompiledConfig(marketDto, cachedConfig);
+                
+                totalMarkets += markets.Count;
+                totalOdds += odds.Count;
+
+                Console.WriteLine($"  -> Generated {markets.Count} markets and {odds.Count} odds");
+                
+                // Display some details about generated markets
+                foreach (var market in markets.Take(3)) // Show first 3 markets
+                {
+                    Console.WriteLine($"    Market: {market.Name} (Order: {market.Order}, Tags: {string.Join(", ", market.Tags)})");
+                }
+                
+                if (markets.Count > 3)
+                {
+                    Console.WriteLine($"    ... and {markets.Count - 3} more markets");
+                }
             }
 
-            Console.WriteLine("done");
-
+            Console.WriteLine($"\nProcessing Summary:");
+            Console.WriteLine($"  Total Markets Processed: {marketDtos.Count}");
+            Console.WriteLine($"  Total Markets Generated: {totalMarkets}");
+            Console.WriteLine($"  Total Odds Generated: {totalOdds}");
+            Console.WriteLine($"  Cache Status: {_cacheService.GetCacheSize()} configurations cached");
         }
-
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing sample data: {ex.Message}");
+        }
     }
 
+    // Method to demonstrate cache invalidation and reloading
+    public static async Task ReloadConfigurationAsync(string sport)
+    {
+        Console.WriteLine($"Reloading configuration for {sport}...");
+        
+        try
+        {
+            // Invalidate cache for the sport
+            _cacheService.InvalidateCache(sport);
+            
+            // Reload from database
+            var dbConfig = await _mongoService.GetSportConfigurationBySportAsync(sport);
+            if (dbConfig != null)
+            {
+                // Recompile and cache
+                var compiledConfig = _compilationService.CompileSportConfiguration(dbConfig);
+                _cacheService.CacheConfiguration(sport, compiledConfig);
+                Console.WriteLine($"Configuration for {sport} reloaded and cached successfully.");
+            }
+            else
+            {
+                Console.WriteLine($"Configuration for {sport} not found in database.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reloading configuration for {sport}: {ex.Message}");
+        }
+    }
+
+    // Method to demonstrate cache management
+    public static void ShowCacheStatus()
+    {
+        Console.WriteLine("\nCache Status:");
+        Console.WriteLine($"  Total Cached Configurations: {_cacheService.GetCacheSize()}");
+        Console.WriteLine($"  Cached Sports: {string.Join(", ", _cacheService.GetCachedSports())}");
+        
+        // Clear expired cache
+        _cacheService.ClearExpiredCache();
+        Console.WriteLine($"  After cleanup: {_cacheService.GetCacheSize()} configurations");
+    }
 }
