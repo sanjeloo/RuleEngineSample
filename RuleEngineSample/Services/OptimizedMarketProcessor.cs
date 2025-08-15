@@ -18,72 +18,82 @@ namespace RuleEngineSample.Services
         public (List<DbMarket> Markets, List<DbOdd> Odds) ProcessMarketWithCompiledConfig(
             MarketDto marketDto, CompiledSportConfiguration sportConfig)
         {
-            var allMarkets = new List<DbMarket>();
-            var allOdds = new List<DbOdd>();
-
-            foreach (var configGroup in sportConfig.MarketConfigs)
+            try
             {
-                // Use compiled regex - much faster
-                if (!configGroup.CompiledRegex.IsMatch(marketDto.Name))
-                    continue;
 
-                // Process markets within this group
-                foreach (var marketConfig in configGroup.Markets)
+
+                var allMarkets = new List<DbMarket>();
+                var allOdds = new List<DbOdd>();
+
+                foreach (var configGroup in sportConfig.MarketConfigs)
                 {
-                    List<string> marketNames = new();
+                    // Use compiled regex - much faster
+                    if (!configGroup.CompiledRegex.IsMatch(marketDto.Name))
+                        continue;
 
-                    if (marketConfig.NameMustSetFromMarketName)
+                    // Process markets within this group
+                    foreach (var marketConfig in configGroup.Markets)
                     {
-                        marketNames.Add(marketConfig.MarketName);
-                    }
-                    else
-                    {
-                        // Use compiled expressions if available, fallback to dynamic if not
-                        if (marketConfig.CompiledMarketWhere != null && marketConfig.CompiledMarketSelect != null)
+                        List<string> marketNames = new();
+
+                        if (marketConfig.NameMustSetFromMarketName)
                         {
-                            try
+                            marketNames.Add(marketConfig.MarketName);
+                        }
+                        else
+                        {
+                            // Use compiled expressions if available, fallback to dynamic if not
+                            if (marketConfig.CompiledMarketWhere != null && marketConfig.CompiledMarketSelect != null)
                             {
-                                var filteredOdds = marketDto.Odds.Where(marketConfig.CompiledMarketWhere);
-                                var groupedOdds = filteredOdds.GroupBy(o => o.Name);
-                                
-                                foreach (var group in groupedOdds)
+                                try
                                 {
-                                    var marketName = marketConfig.CompiledMarketSelect(group);
-                                    if (!string.IsNullOrEmpty(marketName))
+                                    var filteredOdds = marketDto.Odds.Where(marketConfig.CompiledMarketWhere);
+                                    var groupedOdds = filteredOdds.GroupBy(o => o.Name);
+
+                                    foreach (var group in groupedOdds)
                                     {
-                                        marketNames.Add(marketName);
+                                        var marketName = marketConfig.CompiledMarketSelect(group);
+                                        if (!string.IsNullOrEmpty(marketName))
+                                        {
+                                            marketNames.Add(marketName);
+                                        }
                                     }
                                 }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Error using compiled expressions for {marketConfig.MarketName}: {ex.Message}");
+                                    // Fallback to dynamic processing
+                                    marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
+                                }
                             }
-                            catch (Exception ex)
+                            else
                             {
-                                Console.WriteLine($"Error using compiled expressions for {marketConfig.MarketName}: {ex.Message}");
                                 // Fallback to dynamic processing
                                 marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
                             }
                         }
-                        else
+
+                        foreach (var marketName in marketNames)
                         {
-                            // Fallback to dynamic processing
-                            marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
+                            if (string.IsNullOrEmpty(marketName))
+                                continue;
+
+                            allMarkets.Add(new DbMarket(marketName, marketConfig.Description, marketConfig.Order, marketConfig.Tags));
+
+                            // Process odds using compiled expressions
+                            var filteredOdds = ProcessOddsWithCompiledConfig(marketDto, marketConfig, marketName);
+                            allOdds.AddRange(filteredOdds);
                         }
                     }
-
-                    foreach (var marketName in marketNames)
-                    {
-                        if (string.IsNullOrEmpty(marketName))
-                            continue;
-
-                        allMarkets.Add(new DbMarket(marketName, marketConfig.Description, marketConfig.Order, marketConfig.Tags));
-
-                        // Process odds using compiled expressions
-                        var filteredOdds = ProcessOddsWithCompiledConfig(marketDto, marketConfig, marketName);
-                        allOdds.AddRange(filteredOdds);
-                    }
                 }
-            }
 
-            return (allMarkets, allOdds);
+                return (allMarkets, allOdds);
+            }
+            catch (Exception e)
+            {
+
+                throw;
+            }
         }
 
         private List<string> ProcessMarketNamesWithFallback(MarketDto marketDto, CompiledMarketConfig marketConfig)
@@ -218,11 +228,11 @@ namespace RuleEngineSample.Services
                         var handicap = handicapProperty.GetValue(result);
                         if (handicap != null && decimal.TryParse(handicap.ToString(), out var handicapValue))
                         {
-                            return new DbOdd(marketName, name, odd, handicapValue);
+                            return new DbOdd(name, odd, handicapValue);
                         }
                     }
 
-                    return new DbOdd(marketName, name, odd);
+                    return new DbOdd(name, odd);
                 }
             }
             catch (Exception ex)
@@ -241,11 +251,11 @@ namespace RuleEngineSample.Services
 
                 if (((object)obj).GetType().GetProperty("Handicap") != null)
                 {
-                    return new DbOdd(marketName, obj.Name, obj.Odd, obj.Handicap);
+                    return new DbOdd(obj.Name, obj.Odd, obj.Handicap);
                 }
                 else
                 {
-                    return new DbOdd(marketName, obj.Name, obj.Odd);
+                    return new DbOdd(obj.Name, obj.Odd);
                 }
             }
             catch (Exception ex)

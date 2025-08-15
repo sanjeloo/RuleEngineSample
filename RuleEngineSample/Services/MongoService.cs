@@ -136,7 +136,7 @@ namespace RuleEngineSample.Services
                                     Order = 10,
                                     Tags = new[] { "Main Markets" },
                                     OddWhere = "Header != null",
-                                    OddSelect = "new ( (Header) + \" (\" + Name + \")\" as Name, Odd,decimal.Parse(Name) as Handicap)"
+                                    OddSelect = "new DbOdd ( (Header) + \" (\" + Name + \")\" as Name, Odd,decimal.Parse(Name) as Handicap)"
                                 }
                             }
                         },
@@ -158,7 +158,7 @@ namespace RuleEngineSample.Services
                                     Order = 170,
                                     Tags = new[] { "Batter Markets" },
                                     OddWhere = "Header != null",
-                                    OddSelect = "new ( (Name.Split(\" v \")[Header == \"1\" ? 0 : 1]) as Name, Odd)"
+                                    OddSelect = "new DbOdd ( (Name.Split(\" v \")[Header == \"1\" ? 0 : 1]) as Name, Odd)"
                                 }
                             }
                         },
@@ -180,7 +180,7 @@ namespace RuleEngineSample.Services
                                     Order = 110,
                                     Tags = new[] { "Main Markets" },
                                     OddWhere = "Header != null && Name == \"To Win\" ",
-                                    OddSelect = "new ( GeneralFunctions.GetCompetitor(Header) as Name, Odd)"
+                                    OddSelect = "new DbOdd ( GeneralFunctions.GetCompetitor(Header) as Name, Odd)"
                                 },
                                 new MarketConfig
                                 {
@@ -194,7 +194,7 @@ namespace RuleEngineSample.Services
                                     Order = 130,
                                     Tags = new[] { "Main Markets" },
                                     OddWhere = "Header != null && Handicap != null && Name == \"Total\" ",
-                                    OddSelect = "new ( ( GeneralFunctions.GetCompetitor(Header) + \" \" + (Handicap.StartsWith(\"O\") ? \"Over (\" + Handicap.Substring(2) + \")\" : Handicap.StartsWith(\"U\") ? \"Under(\" + Handicap.Substring(2) + \")\" : Handicap)) as Name, Odd, (decimal.Parse(Handicap.Substring(2))) as Handicap)"
+                                    OddSelect = "new DbOdd ( ( GeneralFunctions.GetCompetitor(Header) + \" \" + (Handicap.StartsWith(\"O\") ? \"Over (\" + Handicap.Substring(2) + \")\" : Handicap.StartsWith(\"U\") ? \"Under(\" + Handicap.Substring(2) + \")\" : Handicap)) as Name, Odd, (decimal.Parse(Handicap.Substring(2))) as Handicap)"
                                 },
                                 new MarketConfig
                                 {
@@ -208,7 +208,7 @@ namespace RuleEngineSample.Services
                                     Order = 120,
                                     Tags = new[] { "Main Markets" },
                                     OddWhere = "Header != null && Handicap != null && Name == \"Handicap\" ",
-                                    OddSelect = "new ( ( GeneralFunctions.GetCompetitor(Header) + \" (\" + Handicap + \")\") as Name, Odd, decimal.Parse(Handicap) as Handicap)"
+                                    OddSelect = "new DbOdd ( ( GeneralFunctions.GetCompetitor(Header) + \" (\" + Handicap + \")\") as Name, Odd, decimal.Parse(Handicap) as Handicap)"
                                 }
                             }
                         }

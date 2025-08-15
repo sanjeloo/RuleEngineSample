@@ -81,7 +81,7 @@ namespace RuleEngineSample.Services
 
                         // Compile OddSelect expression
                         compiledMarket.CompiledOddSelect = DynamicExpressionParser
-                            .ParseLambda<OddsDto, object>(_config, false, marketConfig.OddSelect)
+                            .ParseLambda<OddsDto, DbOdd>(_config, false, marketConfig.OddSelect)
                             .Compile();
                     }
                     catch (Exception ex)

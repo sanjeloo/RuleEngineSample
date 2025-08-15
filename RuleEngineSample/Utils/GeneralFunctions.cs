@@ -1,4 +1,5 @@
-﻿using RuleEngineSample.Utils;
+﻿using RuleEngineSample.Models;
+using RuleEngineSample.Utils;
 using System.Linq.Dynamic.Core.CustomTypeProviders;
 using System.Text.RegularExpressions;
 
@@ -83,19 +84,21 @@ namespace RuleEngineSample.Utils
         public override HashSet<Type> GetCustomTypes()
         {
             var types = base.GetCustomTypes();
-            types.Add(typeof(GeneralFunctions)); // Your static helper class
-            types.Add(typeof(Regex)); // Regex class
-            types.Add(typeof(RegexOptions)); // RegexOptions enum
-            types.Add(typeof(StringSplitOptions)); // StringSplitOptions enum
-            types.Add(typeof(StringComparison)); // StringComparison enum
-            types.Add(typeof(decimal)); // Decimal type
-            types.Add(typeof(int)); // Int type
-            types.Add(typeof(double)); // Double type
-            types.Add(typeof(bool)); // Boolean type
-            types.Add(typeof(string)); // String type
-            types.Add(typeof(Array)); // Array type
-            types.Add(typeof(IEnumerable<>)); // Generic IEnumerable
-            types.Add(typeof(List<>)); // Generic List
+            types.Add(typeof(GeneralFunctions));
+            types.Add(typeof(DbOdd));
+            types.Add(typeof(OddsDto));
+            types.Add(typeof(Regex)); 
+            types.Add(typeof(RegexOptions)); 
+            types.Add(typeof(StringSplitOptions)); 
+            types.Add(typeof(StringComparison));
+            types.Add(typeof(decimal)); 
+            types.Add(typeof(int)); 
+            types.Add(typeof(double)); 
+            types.Add(typeof(bool));
+            types.Add(typeof(string));
+            types.Add(typeof(Array));
+            types.Add(typeof(IEnumerable<>)); 
+            types.Add(typeof(List<>));
             return types;
         }
     }
