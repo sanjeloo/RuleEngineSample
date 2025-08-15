@@ -1,5 +1,6 @@
 using RuleEngineSample.Models;
 using System.Linq.Dynamic.Core;
+using System.Text.RegularExpressions;
 
 namespace RuleEngineSample.Services
 {
@@ -20,72 +21,70 @@ namespace RuleEngineSample.Services
         {
             try
             {
-
-
                 var allMarkets = new List<DbMarket>();
                 var allOdds = new List<DbOdd>();
+                var configGroup = sportConfig.MarketConfigs.SingleOrDefault(c => c.CompiledRegex.IsMatch(marketDto.Name));
 
-                foreach (var configGroup in sportConfig.MarketConfigs)
+                if (configGroup is null)
                 {
-                    // Use compiled regex - much faster
-                    if (!configGroup.CompiledRegex.IsMatch(marketDto.Name))
-                        continue;
+                    return (allMarkets, allOdds);
+                }
 
-                    // Process markets within this group
-                    foreach (var marketConfig in configGroup.Markets)
+                // Process markets within this group
+                foreach (var marketConfig in configGroup.Markets)
+                {
+                    List<string> marketNames = new();
+
+                    if (marketConfig.NameMustSetFromMarketName)
                     {
-                        List<string> marketNames = new();
+                        marketNames.Add(marketConfig.MarketName);
+                    }
+                    else
+                    {
+                        // Use compiled expressions if available, fallback to dynamic if not
+                        //if (marketConfig.CompiledMarketWhere != null && marketConfig.CompiledMarketSelect != null)
+                        //{
+                        try
+                        {
+                            var filteredOdds = marketDto.Odds.Where(marketConfig.CompiledMarketWhere);
+                            var groupedOdds = filteredOdds.GroupBy(o => o.Name);
 
-                        if (marketConfig.NameMustSetFromMarketName)
-                        {
-                            marketNames.Add(marketConfig.MarketName);
-                        }
-                        else
-                        {
-                            // Use compiled expressions if available, fallback to dynamic if not
-                            if (marketConfig.CompiledMarketWhere != null && marketConfig.CompiledMarketSelect != null)
+                            foreach (var group in groupedOdds)
                             {
-                                try
+                                var marketName = marketConfig.CompiledMarketSelect(group);
+                                if (!string.IsNullOrEmpty(marketName))
                                 {
-                                    var filteredOdds = marketDto.Odds.Where(marketConfig.CompiledMarketWhere);
-                                    var groupedOdds = filteredOdds.GroupBy(o => o.Name);
-
-                                    foreach (var group in groupedOdds)
-                                    {
-                                        var marketName = marketConfig.CompiledMarketSelect(group);
-                                        if (!string.IsNullOrEmpty(marketName))
-                                        {
-                                            marketNames.Add(marketName);
-                                        }
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine($"Error using compiled expressions for {marketConfig.MarketName}: {ex.Message}");
-                                    // Fallback to dynamic processing
-                                    marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
+                                    marketNames.Add(marketName);
                                 }
                             }
-                            else
-                            {
-                                // Fallback to dynamic processing
-                                marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
-                            }
                         }
-
-                        foreach (var marketName in marketNames)
+                        catch (Exception ex)
                         {
-                            if (string.IsNullOrEmpty(marketName))
-                                continue;
-
-                            allMarkets.Add(new DbMarket(marketName, marketConfig.Description, marketConfig.Order, marketConfig.Tags));
-
-                            // Process odds using compiled expressions
-                            var filteredOdds = ProcessOddsWithCompiledConfig(marketDto, marketConfig, marketName);
-                            allOdds.AddRange(filteredOdds);
+                            Console.WriteLine($"Error using compiled expressions for {marketConfig.MarketName}: {ex.Message}");
+                            // Fallback to dynamic processing
+                            marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
                         }
+                        //}
+                        //else
+                        //{
+                        //    // Fallback to dynamic processing
+                        //    marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
+                        //}
+                    }
+
+                    foreach (var marketName in marketNames)
+                    {
+                        if (string.IsNullOrEmpty(marketName))
+                            continue;
+
+                        allMarkets.Add(new DbMarket(marketName, marketConfig.Description, marketConfig.Order, marketConfig.Tags));
+
+                        // Process odds using compiled expressions
+                        var filteredOdds = ProcessOddsWithCompiledConfig(marketDto, marketConfig, marketName);
+                        allOdds.AddRange(filteredOdds);
                     }
                 }
+
 
                 return (allMarkets, allOdds);
             }
@@ -122,63 +121,20 @@ namespace RuleEngineSample.Services
 
             try
             {
-                if (marketConfig.CompiledOddWhere != null)
-                {
-                    // Use compiled expression for filtering
-                    var filteredOddsList = marketDto.Odds.Where(marketConfig.CompiledOddWhere);
-
-                    foreach (var odd in filteredOddsList)
+                // Use compiled expression for filtering
+                var filteredOddsList = marketDto.Odds.Where(marketConfig.CompiledOutcomeWhere).ToList();
+                 filteredOdds = filteredOddsList.Select(
+                    c =>
                     {
-                        try
+                        var odd = new DbOdd
                         {
-                            if (marketConfig.CompiledOddSelect != null)
-                            {
-                                // Use compiled expression for selection
-                                var result = marketConfig.CompiledOddSelect(odd);
-                                var dbOdd = CreateDbOddFromResult(result, marketName);
-                                if (dbOdd != null)
-                                {
-                                    filteredOdds.Add(dbOdd);
-                                }
-                            }
-                            else
-                            {
-                                // Fallback to dynamic processing
-                                var dbOdd = ProcessOddWithFallback(odd, marketConfig, marketName);
-                                if (dbOdd != null)
-                                {
-                                    filteredOdds.Add(dbOdd);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error processing odd with compiled expression: {ex.Message}");
-                            // Fallback to dynamic processing
-                            var dbOdd = ProcessOddWithFallback(odd, marketConfig, marketName);
-                            if (dbOdd != null)
-                            {
-                                filteredOdds.Add(dbOdd);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // Fallback to dynamic processing
-                    var dynamicResults = marketDto.Odds.AsQueryable()
-                        .Where(marketConfig.OddWhere)
-                        .Select(_fallbackConfig, marketConfig.OddSelect);
-
-                    foreach (var dynamicObj in dynamicResults)
-                    {
-                        var dbOdd = CreateDbOddFromDynamicResult(dynamicObj, marketName);
-                        if (dbOdd != null)
-                        {
-                            filteredOdds.Add(dbOdd);
-                        }
-                    }
-                }
+                            MarketName = marketName,
+                            Name = marketConfig.CompiledOutcomeName is null ? c.Name : marketConfig.CompiledOutcomeName(c),
+                            Odd = marketConfig.CompiledOutcomeOdd is null ? c.Odd : marketConfig.CompiledOutcomeOdd(c),
+                            Handicap = marketConfig.CompiledOutcomeHandicap is null ? null : marketConfig.CompiledOutcomeHandicap(c)
+                        };
+                        return odd;
+                    }).ToList();
             }
             catch (Exception ex)
             {
@@ -186,83 +142,6 @@ namespace RuleEngineSample.Services
             }
 
             return filteredOdds;
-        }
-
-        private DbOdd? ProcessOddWithFallback(OddsDto odd, CompiledMarketConfig marketConfig, string marketName)
-        {
-            try
-            {
-                var dynamicResults = new List<OddsDto> { odd }.AsQueryable()
-                    .Where(marketConfig.OddWhere)
-                    .Select(_fallbackConfig, marketConfig.OddSelect);
-
-                foreach (var dynamicObj in dynamicResults)
-                {
-                    return CreateDbOddFromDynamicResult(dynamicObj, marketName);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in fallback odd processing: {ex.Message}");
-            }
-
-            return null;
-        }
-
-        private DbOdd? CreateDbOddFromResult(object result, string marketName)
-        {
-            try
-            {
-                var resultType = result.GetType();
-                var nameProperty = resultType.GetProperty("Name");
-                var oddProperty = resultType.GetProperty("Odd");
-                var handicapProperty = resultType.GetProperty("Handicap");
-
-                if (nameProperty != null && oddProperty != null)
-                {
-                    var name = nameProperty.GetValue(result)?.ToString() ?? "";
-                    var odd = Convert.ToDecimal(oddProperty.GetValue(result));
-
-                    if (handicapProperty != null)
-                    {
-                        var handicap = handicapProperty.GetValue(result);
-                        if (handicap != null && decimal.TryParse(handicap.ToString(), out var handicapValue))
-                        {
-                            return new DbOdd(name, odd, handicapValue);
-                        }
-                    }
-
-                    return new DbOdd(name, odd);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error creating DbOdd from compiled result: {ex.Message}");
-            }
-
-            return null;
-        }
-
-        private DbOdd? CreateDbOddFromDynamicResult(dynamic dynamicObj, string marketName)
-        {
-            try
-            {
-                dynamic obj = dynamicObj;
-
-                if (((object)obj).GetType().GetProperty("Handicap") != null)
-                {
-                    return new DbOdd(obj.Name, obj.Odd, obj.Handicap);
-                }
-                else
-                {
-                    return new DbOdd(obj.Name, obj.Odd);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error creating DbOdd from dynamic result: {ex.Message}");
-                return null;
-            }
         }
     }
 }

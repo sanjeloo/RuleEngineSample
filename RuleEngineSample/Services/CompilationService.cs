@@ -51,7 +51,7 @@ namespace RuleEngineSample.Services
                         Description = marketConfig.Description,
                         Order = marketConfig.Order,
                         Tags = marketConfig.Tags,
-                        OddWhere = marketConfig.OddWhere,
+                        OddWhere = marketConfig.OutcomeWhere,
                         OddSelect = marketConfig.OddSelect
                     };
 
@@ -62,7 +62,7 @@ namespace RuleEngineSample.Services
                         if (!string.IsNullOrEmpty(marketConfig.MarketWhere))
                         {
                             compiledMarket.CompiledMarketWhere = DynamicExpressionParser
-                                .ParseLambda<OddsDto, bool>(_config,false, marketConfig.MarketWhere)
+                                .ParseLambda<OddsDto, bool>(_config, false, marketConfig.MarketWhere)
                                 .Compile();
                         }
 
@@ -74,15 +74,35 @@ namespace RuleEngineSample.Services
                                 .Compile();
                         }
 
-                        // Compile OddWhere expression
-                        compiledMarket.CompiledOddWhere = DynamicExpressionParser
-                            .ParseLambda<OddsDto, bool>(_config, false, marketConfig.OddWhere)
+                        // where
+                        if (!string.IsNullOrEmpty(marketConfig.OutcomeWhere))
+                            compiledMarket.CompiledOutcomeWhere = DynamicExpressionParser
+                            .ParseLambda<OddsDto, bool>(_config, false, marketConfig.OutcomeWhere)
                             .Compile();
 
-                        // Compile OddSelect expression
-                        compiledMarket.CompiledOddSelect = DynamicExpressionParser
-                            .ParseLambda<OddsDto, DbOdd>(_config, false, marketConfig.OddSelect)
+                        // name
+                        if (!string.IsNullOrEmpty(marketConfig.OutcomeName))
+                            compiledMarket.CompiledOutcomeName = DynamicExpressionParser
+                            .ParseLambda<OddsDto, string>(_config, false, marketConfig.OutcomeName)
                             .Compile();
+
+                        // odd
+                        if (!string.IsNullOrEmpty(marketConfig.OutcomeOdd))
+                            compiledMarket.CompiledOutcomeOdd = DynamicExpressionParser
+                            .ParseLambda<OddsDto, decimal>(_config, false, marketConfig.OutcomeOdd)
+                            .Compile();
+
+                        // odd
+                        if (!string.IsNullOrEmpty(marketConfig.OutcomeHandicap))
+                            compiledMarket.CompiledOutcomeHandicap = DynamicExpressionParser
+                            .ParseLambda<OddsDto, decimal>(_config, false, marketConfig.OutcomeHandicap)
+                            .Compile();
+
+                        if (!string.IsNullOrEmpty(marketConfig.OddSelect))
+                            // Compile OddSelect expression
+                            compiledMarket.CompiledOutcomeSelect = DynamicExpressionParser
+                                .ParseLambda<OddsDto, DbOdd>(_config, false, marketConfig.OddSelect)
+                                .Compile();
                     }
                     catch (Exception ex)
                     {
@@ -102,7 +122,7 @@ namespace RuleEngineSample.Services
         public List<CompiledSportConfiguration> CompileAllSportConfigurations(List<SportConfiguration> sportConfigs)
         {
             var compiledConfigs = new List<CompiledSportConfiguration>();
-            
+
             foreach (var sportConfig in sportConfigs)
             {
                 try

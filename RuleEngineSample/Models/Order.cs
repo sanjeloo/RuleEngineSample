@@ -118,16 +118,19 @@ namespace RuleEngineSample.Models
         public string[] Tags { get; set; } = Array.Empty<string>();
 
         [BsonElement("OddWhere")]
-        public string OddWhere { get; set; } = string.Empty;
+        public string? OutcomeWhere { get; set; }
 
         [BsonElement("OddSelect")]
-        public string OddSelect { get; set; } = string.Empty;
+        public string? OddSelect { get; set; } 
 
         [BsonElement("CreatedAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [BsonElement("UpdatedAt")]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public string? OutcomeName { get;  set; }
+        public string? OutcomeOdd { get;  set; }
+        public string? OutcomeHandicap { get;  set; }
     }
 
     // Compiled Configuration Models for Performance
@@ -165,8 +168,11 @@ namespace RuleEngineSample.Models
         // Compiled expressions for performance
         public Func<OddsDto, bool>? CompiledMarketWhere { get; set; }
         public Func<IGrouping<string, OddsDto>, string>? CompiledMarketSelect { get; set; }
-        public Func<OddsDto, bool> CompiledOddWhere { get; set; } = null!;
-        public Func<OddsDto, object> CompiledOddSelect { get; set; } = null!;
+        public Func<OddsDto, bool> CompiledOutcomeWhere { get; set; } = null!;
+        public Func<OddsDto, object>? CompiledOutcomeSelect { get; set; } = null!;
+        public Func<OddsDto, string> CompiledOutcomeName { get; set; } = null!;
+        public Func<OddsDto, decimal>? CompiledOutcomeHandicap { get; set; } = null!;
+        public Func<OddsDto, decimal> CompiledOutcomeOdd { get; set; } = null!;
     }
 
     // Legacy models for backward compatibility

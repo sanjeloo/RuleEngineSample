@@ -135,8 +135,11 @@ namespace RuleEngineSample.Services
                                     Description = "bet is valid after game is done",
                                     Order = 10,
                                     Tags = new[] { "Main Markets" },
-                                    OddWhere = "Header != null",
-                                    OddSelect = "new DbOdd ( (Header) + \" (\" + Name + \")\" as Name, Odd,decimal.Parse(Name) as Handicap)"
+                                    OutcomeWhere = "Header != null",
+                                    OutcomeName = "(Header) + \" (\" + Name + \")\"",
+                                    OutcomeOdd = "Odd",
+                                    OutcomeHandicap = "decimal.Parse(Name)"
+                                    //OddSelect = "new DbOdd ( (Header) + \" (\" + Name + \")\" as Name, Odd,decimal.Parse(Name) as Handicap)"
                                 }
                             }
                         },
@@ -157,8 +160,11 @@ namespace RuleEngineSample.Services
                                     Description = "bet is valid after game is done",
                                     Order = 170,
                                     Tags = new[] { "Batter Markets" },
-                                    OddWhere = "Header != null",
-                                    OddSelect = "new DbOdd ( (Name.Split(\" v \")[Header == \"1\" ? 0 : 1]) as Name, Odd)"
+                                    OutcomeWhere = "Header != null",
+                                    OutcomeName = "(Name.Split(\" v \")[Header == \"1\" ? 0 : 1])",
+                                    OutcomeOdd = "Odd",
+                                    OutcomeHandicap = null,
+                                    //OddSelect = "new DbOdd ( (Name.Split(\" v \")[Header == \"1\" ? 0 : 1]) as Name, Odd)"
                                 }
                             }
                         },
@@ -179,8 +185,11 @@ namespace RuleEngineSample.Services
                                     Description = "bet is valid after game is done",
                                     Order = 110,
                                     Tags = new[] { "Main Markets" },
-                                    OddWhere = "Header != null && Name == \"To Win\" ",
-                                    OddSelect = "new DbOdd ( GeneralFunctions.GetCompetitor(Header) as Name, Odd)"
+                                    OutcomeWhere = "Header != null && Name == \"To Win\" ",
+                                    OutcomeName = "GeneralFunctions.GetCompetitor(Header)",
+                                    OutcomeOdd = "Odd",
+                                    OutcomeHandicap = null,
+                                    //OddSelect = "new DbOdd ( GeneralFunctions.GetCompetitor(Header) as Name, Odd)"
                                 },
                                 new MarketConfig
                                 {
@@ -193,8 +202,11 @@ namespace RuleEngineSample.Services
                                     Description = "bet is valid after game is done",
                                     Order = 130,
                                     Tags = new[] { "Main Markets" },
-                                    OddWhere = "Header != null && Handicap != null && Name == \"Total\" ",
-                                    OddSelect = "new DbOdd ( ( GeneralFunctions.GetCompetitor(Header) + \" \" + (Handicap.StartsWith(\"O\") ? \"Over (\" + Handicap.Substring(2) + \")\" : Handicap.StartsWith(\"U\") ? \"Under(\" + Handicap.Substring(2) + \")\" : Handicap)) as Name, Odd, (decimal.Parse(Handicap.Substring(2))) as Handicap)"
+                                    OutcomeWhere = "Header != null && Handicap != null && Name == \"Total\" ",
+                                    OutcomeName = "Handicap.StartsWith(\"O\") ? \"Over (\" + Handicap.Substring(2) + \")\" : Handicap.StartsWith(\"U\") ? \"Under(\" + Handicap.Substring(2) + \")\" : Handicap",
+                                    OutcomeOdd = "Odd",
+                                    OutcomeHandicap = "decimal.Parse(Handicap.Substring(2))"
+                                   // OddSelect = "new DbOdd ( ( GeneralFunctions.GetCompetitor(Header) + \" \" + (Handicap.StartsWith(\"O\") ? \"Over (\" + Handicap.Substring(2) + \")\" : Handicap.StartsWith(\"U\") ? \"Under(\" + Handicap.Substring(2) + \")\" : Handicap)) as Name, Odd, (decimal.Parse(Handicap.Substring(2))) as Handicap)"
                                 },
                                 new MarketConfig
                                 {
@@ -207,8 +219,11 @@ namespace RuleEngineSample.Services
                                     Description = "bet is valid after game is done",
                                     Order = 120,
                                     Tags = new[] { "Main Markets" },
-                                    OddWhere = "Header != null && Handicap != null && Name == \"Handicap\" ",
-                                    OddSelect = "new DbOdd ( ( GeneralFunctions.GetCompetitor(Header) + \" (\" + Handicap + \")\") as Name, Odd, decimal.Parse(Handicap) as Handicap)"
+                                    OutcomeWhere = "Header != null && Handicap != null && Name == \"Handicap\" ",
+                                    OutcomeName = "GeneralFunctions.GetCompetitor(Header) + \" (\" + Handicap + \")\"",
+                                    OutcomeOdd = "Odd",
+                                    OutcomeHandicap = "decimal.Parse(Handicap)"
+                                   // OddSelect = "new DbOdd ( ( GeneralFunctions.GetCompetitor(Header) + \" (\" + Handicap + \")\") as Name, Odd, decimal.Parse(Handicap) as Handicap)"
                                 }
                             }
                         }

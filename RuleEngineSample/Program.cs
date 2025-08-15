@@ -145,8 +145,8 @@ class Program
                     }
                     else
                     {
-                        Console.WriteLine("Cricket configuration not found in database. Skipping...");
-                        continue;
+                        Console.WriteLine("Cricket configuration not found in database. Skipping...");                                                  
+                        continue;                                            
                     }
                 }
 
