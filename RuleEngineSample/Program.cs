@@ -96,6 +96,10 @@ class Program
             // Compile all configurations
             var compiledConfigs = _compilationService.CompileAllSportConfigurations(sportConfigs);
             
+            // Measure the size of compiledConfigs object in MB
+            var compiledConfigsSizeMB = GetObjectSizeInMB(compiledConfigs);
+            Console.WriteLine($"Compiled configurations object size: {compiledConfigsSizeMB:F2} MB");
+            
             // Cache compiled configurations
             foreach (var compiledConfig in compiledConfigs)
             {
@@ -222,5 +226,39 @@ class Program
         // Clear expired cache
         _cacheService.ClearExpiredCache();
         Console.WriteLine($"  After cleanup: {_cacheService.GetCacheSize()} configurations");
+    }
+
+    // Method to calculate object size in MB using memory profiling
+    private static double GetObjectSizeInMB(object obj)
+    {
+        try
+        {
+            // Get the initial memory usage
+            var initialMemory = GC.GetTotalMemory(false);
+            
+            // Create a reference to the object to prevent garbage collection
+            var reference = obj;
+            
+            // Force garbage collection to get accurate measurement
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            
+            // Get memory after GC
+            var afterGCMemory = GC.GetTotalMemory(false);
+            
+            // Calculate the difference (this is approximate)
+            var memoryDifference = Math.Abs(initialMemory - afterGCMemory);
+            
+            // Convert to MB
+            var sizeInMB = memoryDifference / (1024.0 * 1024.0);
+            
+            return sizeInMB;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Could not measure object size: {ex.Message}");
+            return 0.0;
+        }
     }
 }
