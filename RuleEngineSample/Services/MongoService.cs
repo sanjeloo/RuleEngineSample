@@ -128,7 +128,6 @@ namespace RuleEngineSample.Services
                                 {
                                     MarketName = "Runs at Fall of 1st Wicket",
                                     MarketRegex = "^Runs at Fall of 1st Wicket$",
-                                    NameMustSetFromMarketName = true,
                                     MarketWhere = null,
                                     MarketGroupBy = null,
                                     MarketSelect = null,
@@ -139,7 +138,6 @@ namespace RuleEngineSample.Services
                                     OutcomeName = "(Header) + \" (\" + Name + \")\"",
                                     OutcomeOdd = "Odd",
                                     OutcomeHandicap = "decimal.Parse(Name)"
-                                    //OddSelect = "new DbOdd ( (Header) + \" (\" + Name + \")\" as Name, Odd,decimal.Parse(Name) as Handicap)"
                                 }
                             }
                         },
@@ -153,7 +151,6 @@ namespace RuleEngineSample.Services
                                 {
                                     MarketName = "Batter Matches (Most Runs) - Player v Player",
                                     MarketRegex = "^Batter Matches \\(Most Runs\\) - (.+) v (.+)$",
-                                    NameMustSetFromMarketName = false,
                                     MarketWhere = "Name != null",
                                     MarketGroupBy = "Name",
                                     MarketSelect = "\"Batter Matches (Most Runs) - \" + Key",
@@ -164,7 +161,6 @@ namespace RuleEngineSample.Services
                                     OutcomeName = "(Name.Split(\" v \")[Header == \"1\" ? 0 : 1])",
                                     OutcomeOdd = "Odd",
                                     OutcomeHandicap = null,
-                                    //OddSelect = "new DbOdd ( (Name.Split(\" v \")[Header == \"1\" ? 0 : 1]) as Name, Odd)"
                                 }
                             }
                         },
@@ -178,7 +174,6 @@ namespace RuleEngineSample.Services
                                 {
                                     MarketName = "Match Result",
                                     MarketRegex = "^Match Result$",
-                                    NameMustSetFromMarketName = true,
                                     MarketWhere = null,
                                     MarketGroupBy = null,
                                     MarketSelect = null,
@@ -189,13 +184,11 @@ namespace RuleEngineSample.Services
                                     OutcomeName = "GeneralFunctions.GetCompetitor(Header)",
                                     OutcomeOdd = "Odd",
                                     OutcomeHandicap = null,
-                                    //OddSelect = "new DbOdd ( GeneralFunctions.GetCompetitor(Header) as Name, Odd)"
                                 },
                                 new MarketConfig
                                 {
                                     MarketName = "Total Score",
                                     MarketRegex = "^Total Score$",
-                                    NameMustSetFromMarketName = true,
                                     MarketWhere = null,
                                     MarketGroupBy = null,
                                     MarketSelect = null,
@@ -206,13 +199,11 @@ namespace RuleEngineSample.Services
                                     OutcomeName = "Handicap.StartsWith(\"O\") ? \"Over (\" + Handicap.Substring(2) + \")\" : Handicap.StartsWith(\"U\") ? \"Under(\" + Handicap.Substring(2) + \")\" : Handicap",
                                     OutcomeOdd = "Odd",
                                     OutcomeHandicap = "decimal.Parse(Handicap.Substring(2))"
-                                   // OddSelect = "new DbOdd ( ( GeneralFunctions.GetCompetitor(Header) + \" \" + (Handicap.StartsWith(\"O\") ? \"Over (\" + Handicap.Substring(2) + \")\" : Handicap.StartsWith(\"U\") ? \"Under(\" + Handicap.Substring(2) + \")\" : Handicap)) as Name, Odd, (decimal.Parse(Handicap.Substring(2))) as Handicap)"
                                 },
                                 new MarketConfig
                                 {
                                     MarketName = "Set Handicap",
                                     MarketRegex = "^Set Handicap$",
-                                    NameMustSetFromMarketName = true,
                                     MarketWhere = null,
                                     MarketGroupBy = null,
                                     MarketSelect = null,
@@ -223,7 +214,6 @@ namespace RuleEngineSample.Services
                                     OutcomeName = "GeneralFunctions.GetCompetitor(Header) + \" (\" + Handicap + \")\"",
                                     OutcomeOdd = "Odd",
                                     OutcomeHandicap = "decimal.Parse(Handicap)"
-                                   // OddSelect = "new DbOdd ( ( GeneralFunctions.GetCompetitor(Header) + \" (\" + Handicap + \")\") as Name, Odd, decimal.Parse(Handicap) as Handicap)"
                                 }
                             }
                         }

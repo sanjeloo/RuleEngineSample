@@ -44,7 +44,6 @@ namespace RuleEngineSample.Services
                         Id = marketConfig.Id,
                         MarketName = marketConfig.MarketName,
                         MarketRegex = marketConfig.MarketRegex,
-                        NameMustSetFromMarketName = marketConfig.NameMustSetFromMarketName,
                         MarketWhere = marketConfig.MarketWhere,
                         MarketGroupBy = marketConfig.MarketGroupBy,
                         MarketSelect = marketConfig.MarketSelect,
@@ -98,11 +97,6 @@ namespace RuleEngineSample.Services
                             .ParseLambda<OddsDto, decimal>(_config, false, marketConfig.OutcomeHandicap)
                             .Compile();
 
-                        if (!string.IsNullOrEmpty(marketConfig.OddSelect))
-                            // Compile OddSelect expression
-                            compiledMarket.CompiledOutcomeSelect = DynamicExpressionParser
-                                .ParseLambda<OddsDto, DbOdd>(_config, false, marketConfig.OddSelect)
-                                .Compile();
                     }
                     catch (Exception ex)
                     {

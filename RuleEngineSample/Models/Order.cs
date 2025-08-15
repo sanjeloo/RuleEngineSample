@@ -96,9 +96,6 @@ namespace RuleEngineSample.Models
         [BsonElement("MarketRegex")]
         public string MarketRegex { get; set; } = string.Empty;
 
-        [BsonElement("NameMustSetFromMarketName")]
-        public bool NameMustSetFromMarketName { get; set; }
-
         [BsonElement("MarketWhere")]
         public string? MarketWhere { get; set; }
 
@@ -155,7 +152,6 @@ namespace RuleEngineSample.Models
         public string Id { get; set; } = string.Empty;
         public string MarketName { get; set; } = string.Empty;
         public string MarketRegex { get; set; } = string.Empty;
-        public bool NameMustSetFromMarketName { get; set; }
         public string? MarketWhere { get; set; }
         public string? MarketGroupBy { get; set; }
         public string? MarketSelect { get; set; }
@@ -169,7 +165,6 @@ namespace RuleEngineSample.Models
         public Func<OddsDto, bool>? CompiledMarketWhere { get; set; }
         public Func<IGrouping<string, OddsDto>, string>? CompiledMarketSelect { get; set; }
         public Func<OddsDto, bool> CompiledOutcomeWhere { get; set; } = null!;
-        public Func<OddsDto, object>? CompiledOutcomeSelect { get; set; } = null!;
         public Func<OddsDto, string> CompiledOutcomeName { get; set; } = null!;
         public Func<OddsDto, decimal>? CompiledOutcomeHandicap { get; set; } = null!;
         public Func<OddsDto, decimal> CompiledOutcomeOdd { get; set; } = null!;

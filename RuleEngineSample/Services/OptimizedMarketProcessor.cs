@@ -35,15 +35,13 @@ namespace RuleEngineSample.Services
                 {
                     List<string> marketNames = new();
 
-                    if (marketConfig.NameMustSetFromMarketName)
+                    if (string.IsNullOrEmpty(marketConfig.MarketWhere))
                     {
                         marketNames.Add(marketConfig.MarketName);
                     }
                     else
                     {
-                        // Use compiled expressions if available, fallback to dynamic if not
-                        //if (marketConfig.CompiledMarketWhere != null && marketConfig.CompiledMarketSelect != null)
-                        //{
+                      
                         try
                         {
                             var filteredOdds = marketDto.Odds.Where(marketConfig.CompiledMarketWhere);
@@ -64,12 +62,7 @@ namespace RuleEngineSample.Services
                             // Fallback to dynamic processing
                             marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
                         }
-                        //}
-                        //else
-                        //{
-                        //    // Fallback to dynamic processing
-                        //    marketNames = ProcessMarketNamesWithFallback(marketDto, marketConfig);
-                        //}
+                       
                     }
 
                     foreach (var marketName in marketNames)
@@ -123,18 +116,18 @@ namespace RuleEngineSample.Services
             {
                 // Use compiled expression for filtering
                 var filteredOddsList = marketDto.Odds.Where(marketConfig.CompiledOutcomeWhere).ToList();
-                 filteredOdds = filteredOddsList.Select(
-                    c =>
-                    {
-                        var odd = new DbOdd
-                        {
-                            MarketName = marketName,
-                            Name = marketConfig.CompiledOutcomeName is null ? c.Name : marketConfig.CompiledOutcomeName(c),
-                            Odd = marketConfig.CompiledOutcomeOdd is null ? c.Odd : marketConfig.CompiledOutcomeOdd(c),
-                            Handicap = marketConfig.CompiledOutcomeHandicap is null ? null : marketConfig.CompiledOutcomeHandicap(c)
-                        };
-                        return odd;
-                    }).ToList();
+                filteredOdds = filteredOddsList.Select(
+                   c =>
+                   {
+                       var odd = new DbOdd
+                       {
+                           MarketName = marketName,
+                           Name = marketConfig.CompiledOutcomeName is null ? c.Name : marketConfig.CompiledOutcomeName(c),
+                           Odd = marketConfig.CompiledOutcomeOdd is null ? c.Odd : marketConfig.CompiledOutcomeOdd(c),
+                           Handicap = marketConfig.CompiledOutcomeHandicap is null ? null : marketConfig.CompiledOutcomeHandicap(c)
+                       };
+                       return odd;
+                   }).ToList();
             }
             catch (Exception ex)
             {
