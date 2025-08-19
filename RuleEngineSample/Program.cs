@@ -19,8 +19,17 @@ class Program
             // Initialize database with default Cricket configuration if empty
             await InitializeDatabaseAsync();
 
+            var initialMemory = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
+
             // Load and compile configurations
             await LoadAndCompileConfigurationsAsync();
+
+            var beforeGCApply = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            var afterCompiledSize = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
 
             // Process sample data using cached compiled configurations
             await ProcessSampleDataAsync();
@@ -92,13 +101,12 @@ class Program
                 Console.WriteLine("No sport configurations found in database.");
                 return;
             }
-
             // Compile all configurations
             var compiledConfigs = _compilationService.CompileAllSportConfigurations(sportConfigs);
             
             // Measure the size of compiledConfigs object in MB
-            var compiledConfigsSizeMB = GetObjectSizeInMB(compiledConfigs);
-            Console.WriteLine($"Compiled configurations object size: {compiledConfigsSizeMB:F2} MB");
+           // var compiledConfigsSizeMB = GetObjectSizeInMB(compiledConfigs);
+           // Console.WriteLine($"Compiled configurations object size: {compiledConfigsSizeMB:F2} MB");
             
             // Cache compiled configurations
             foreach (var compiledConfig in compiledConfigs)
